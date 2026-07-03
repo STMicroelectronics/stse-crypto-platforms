@@ -1,6 +1,6 @@
 /******************************************************************************
- * \file	stse_platform_crypto.c
- * \brief   STSecureElement cryptographic platform file
+ * \file	stse_platform_aes.c
+ * \brief   STSecureElement AES platform file
  * \author  STMicroelectronics - CS application team
  *
  ******************************************************************************
@@ -18,16 +18,68 @@
 #include "Middleware/STM32_Cryptographic/include/cmox_crypto.h"
 #include "stse_conf.h"
 #include "stselib.h"
+#include <string.h>
 
 cmox_mac_handle_t *pMAC_Handler;
 cmox_cmac_handle_t CMAC_Handler;
 
 #if defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT) || defined(STSE_CONF_USE_SYMMETRIC_KEY_ESTABLISHMENT) || defined(STSE_CONF_USE_HOST_SESSION)
+stse_aes_key_t aes_keys_storage[3] = {
+    {.type = STSE_AES_INVALID_KT,
+     .usage = STSE_AES_KEY_USAGE_INVALID,
+     .key = {0}},
+    {.type = STSE_AES_INVALID_KT,
+     .usage = STSE_AES_KEY_USAGE_INVALID,
+     .key = {0}},
+    {.type = STSE_AES_INVALID_KT,
+     .usage = STSE_AES_KEY_USAGE_INVALID,
+     .key = {0}}};
 
-stse_ReturnCode_t stse_platform_aes_cmac_init(const PLAT_UI8 *pKey,
+stse_ReturnCode_t stse_platform_store_aes_key(PLAT_UI8 *pKey,
                                               PLAT_UI16 key_length,
+                                              stse_aes_key_usage_t usage,
+                                              PLAT_UI32 *pKey_idx) {
+
+    if (pKey == NULL || pKey_idx == NULL || (key_length != STSE_AES_128_KEY_SIZE && key_length != STSE_AES_256_KEY_SIZE)) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
+
+    switch (usage) {
+    case STSE_AES_KEY_USAGE_MAC:
+        *pKey_idx = 0;
+        break;
+    case STSE_AES_KEY_USAGE_CIPHER:
+        *pKey_idx = 1;
+        break;
+    case STSE_AES_KEY_USAGE_GENERIC_SECRET:
+        *pKey_idx = 2;
+        break;
+    default:
+        return STSE_PLATFORM_INVALID_PARAMETER;
+        break;
+    }
+    aes_keys_storage[*pKey_idx].usage = usage;
+    aes_keys_storage[*pKey_idx].type = (key_length == STSE_AES_256_KEY_SIZE) ? STSE_AES_256_KT : STSE_AES_128_KT;
+    memcpy(aes_keys_storage[*pKey_idx].key, pKey, key_length);
+
+    return STSE_OK;
+}
+
+stse_ReturnCode_t stse_platform_delete_aes_key(PLAT_UI32 key_idx) {
+    memset(&aes_keys_storage[key_idx], 0x00, sizeof(aes_keys_storage[key_idx]));
+    aes_keys_storage[key_idx].type = STSE_AES_INVALID_KT;
+    aes_keys_storage[key_idx].usage = STSE_AES_KEY_USAGE_INVALID;
+
+    return STSE_OK;
+}
+
+stse_ReturnCode_t stse_platform_aes_cmac_init(const PLAT_UI32 key_idx,
                                               PLAT_UI16 exp_tag_size) {
     cmox_mac_retval_t retval;
+
+    if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_MAC && aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_GENERIC_SECRET) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
 
     /* - Call CMAC constructor */
     pMAC_Handler = cmox_cmac_construct(&CMAC_Handler, CMOX_CMAC_AESSMALL);
@@ -43,7 +95,9 @@ stse_ReturnCode_t stse_platform_aes_cmac_init(const PLAT_UI8 *pKey,
         return STSE_PLATFORM_AES_CMAC_COMPUTE_ERROR;
     }
     /* - Set Key  */
-    retval = cmox_mac_setKey(pMAC_Handler, pKey, key_length);
+    retval = cmox_mac_setKey(pMAC_Handler,
+                             (const PLAT_UI8 *)aes_keys_storage[key_idx].key,
+                             aes_keys_storage[key_idx].type == STSE_AES_128_KT ? STSE_AES_128_KEY_SIZE : STSE_AES_256_KEY_SIZE);
     if (retval != CMOX_MAC_SUCCESS) {
         return STSE_PLATFORM_AES_CMAC_COMPUTE_ERROR;
     }
@@ -101,26 +155,27 @@ stse_ReturnCode_t stse_platform_aes_cmac_verify_finish(PLAT_UI8 *pTag) {
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload,
-                                                 PLAT_UI16 payload_length,
-                                                 const PLAT_UI8 *pKey,
-                                                 PLAT_UI16 key_length,
+stse_ReturnCode_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
+                                                 const PLAT_UI32 key_idx,
                                                  PLAT_UI16 exp_tag_size,
-                                                 PLAT_UI8 *pTag,
-                                                 PLAT_UI16 *pTag_length) {
+                                                 PLAT_UI8 *pTag, PLAT_UI16 *pTag_length) {
     cmox_mac_retval_t retval;
     size_t cmox_tag_len = *pTag_length;
 
-    retval = cmox_mac_compute(CMOX_CMAC_AESSMALL_ALGO, /* Use AES CMAC algorithm */
-                              pPayload,                /* Message */
-                              payload_length,          /* Message length*/
-                              pKey,                    /* AES key */
-                              key_length,              /* AES key length */
-                              NULL,                    /* Custom Data */
-                              0,                       /* Custom Data length */
-                              pTag,                    /* Tag */
-                              exp_tag_size,            /* Expected Tag size */
-                              &cmox_tag_len            /* Generated Tag size */
+    if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_MAC && aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_GENERIC_SECRET) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
+
+    retval = cmox_mac_compute(CMOX_CMAC_AESSMALL_ALGO,                                                                           /* Use AES CMAC algorithm */
+                              pPayload,                                                                                          /* Message */
+                              payload_length,                                                                                    /* Message length*/
+                              aes_keys_storage[key_idx].key,                                                                     /* AES key */
+                              aes_keys_storage[key_idx].type == STSE_AES_128_KT ? STSE_AES_128_KEY_SIZE : STSE_AES_256_KEY_SIZE, /* AES key length */
+                              NULL,                                                                                              /* Custom Data */
+                              0,                                                                                                 /* Custom Data length */
+                              pTag,                                                                                              /* Tag */
+                              exp_tag_size,                                                                                      /* Expected Tag size */
+                              &cmox_tag_len                                                                                      /* Generated Tag size */
     );
 
     if (retval != CMOX_MAC_SUCCESS) {
@@ -132,24 +187,25 @@ stse_ReturnCode_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload,
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload,
-                                                PLAT_UI16 payload_length,
-                                                const PLAT_UI8 *pKey,
-                                                PLAT_UI16 key_length,
-                                                const PLAT_UI8 *pTag,
-                                                PLAT_UI16 tag_length) {
+stse_ReturnCode_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
+                                                const PLAT_UI32 key_idx,
+                                                const PLAT_UI8 *pTag, PLAT_UI16 tag_length) {
     cmox_mac_retval_t retval;
 
+    if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_MAC && aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_GENERIC_SECRET) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
+
     /* - Perform CMAC verification */
-    retval = cmox_mac_verify(CMOX_CMAC_AESSMALL_ALGO, /* Use AES CMAC algorithm */
-                             pPayload,                /* Message length */
-                             payload_length,          /* Message length */
-                             pKey,                    /* AES key */
-                             key_length,              /* AES key length */
-                             NULL,                    /* Custom data */
-                             0,                       /* Custom data length*/
-                             pTag,                    /* Tag */
-                             tag_length               /* Tag size */
+    retval = cmox_mac_verify(CMOX_CMAC_AESSMALL_ALGO,                                                                           /* Use AES CMAC algorithm */
+                             pPayload,                                                                                          /* Message length */
+                             payload_length,                                                                                    /* Message length */
+                             aes_keys_storage[key_idx].key,                                                                     /* AES key */
+                             aes_keys_storage[key_idx].type == STSE_AES_128_KT ? STSE_AES_128_KEY_SIZE : STSE_AES_256_KEY_SIZE, /* AES key length */
+                             NULL,                                                                                              /* Custom data */
+                             0,                                                                                                 /* Custom data length*/
+                             pTag,                                                                                              /* Tag */
+                             tag_length                                                                                         /* Tag size */
     );
 
     if (retval != CMOX_MAC_AUTH_SUCCESS) {
@@ -161,26 +217,27 @@ stse_ReturnCode_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload,
 #endif /* defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT) || defined(STSE_CONF_USE_SYMMETRIC_KEY_ESTABLISHMENT) */
 
 #if defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT) || defined(STSE_CONF_USE_HOST_SESSION)
-stse_ReturnCode_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext,
-                                            PLAT_UI16 plaintext_length,
-                                            PLAT_UI8 *pInitial_value,
-                                            const PLAT_UI8 *pKey,
-                                            PLAT_UI16 key_length,
-                                            PLAT_UI8 *pEncryptedtext,
+stse_ReturnCode_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext, PLAT_UI16 plaintext_length,
+                                            PLAT_UI8 *pInitial_value, const PLAT_UI32 key_idx, PLAT_UI8 *pEncryptedtext,
                                             PLAT_UI16 *pEncryptedtext_length) {
     cmox_cipher_retval_t retval;
+
+    if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_CIPHER) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
+
     size_t cmox_encryptedtext_len = *pEncryptedtext_length;
 
     /*- Perform AES ECB Encryption */
-    retval = cmox_cipher_encrypt(CMOX_AESSMALL_CBC_ENC_ALGO, /* Use AES CBC algorithm */
-                                 pPlaintext,                 /* Plain Text */
-                                 plaintext_length,           /* Plain Text length*/
-                                 pKey,                       /* AES Key */
-                                 key_length,                 /* AES Key length*/
-                                 pInitial_value,             /* Initial Value */
-                                 16,                         /* Initial Value length */
-                                 pEncryptedtext,             /* Ciphered Text */
-                                 &cmox_encryptedtext_len     /* Ciphered Text length*/
+    retval = cmox_cipher_encrypt(CMOX_AESSMALL_CBC_ENC_ALGO,                                                                        /* Use AES CBC algorithm */
+                                 pPlaintext,                                                                                        /* Plain Text */
+                                 plaintext_length,                                                                                  /* Plain Text length*/
+                                 aes_keys_storage[key_idx].key,                                                                     /* AES key */
+                                 aes_keys_storage[key_idx].type == STSE_AES_128_KT ? STSE_AES_128_KEY_SIZE : STSE_AES_256_KEY_SIZE, /* AES key length */
+                                 pInitial_value,                                                                                    /* Initial Value */
+                                 16,                                                                                                /* Initial Value length */
+                                 pEncryptedtext,                                                                                    /* Ciphered Text */
+                                 &cmox_encryptedtext_len                                                                            /* Ciphered Text length*/
     );
 
     /*- Verify AES ECB Encryption status */
@@ -193,26 +250,26 @@ stse_ReturnCode_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext,
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext,
-                                            PLAT_UI16 encryptedtext_length,
-                                            PLAT_UI8 *pInitial_value,
-                                            const PLAT_UI8 *pKey,
-                                            PLAT_UI16 key_length,
-                                            PLAT_UI8 *pPlaintext,
+stse_ReturnCode_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext, PLAT_UI16 encryptedtext_length,
+                                            PLAT_UI8 *pInitial_value, const PLAT_UI32 key_idx, PLAT_UI8 *pPlaintext,
                                             PLAT_UI16 *pPlaintext_length) {
     cmox_cipher_retval_t retval;
     size_t cmox_plaintext_len = *pPlaintext_length;
 
+    if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_CIPHER) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
+
     /*- Perform AES ECB decryption */
-    retval = cmox_cipher_decrypt(CMOX_AESSMALL_CBC_DEC_ALGO, /* Use AES CBC algorithm */
-                                 pEncryptedtext,             /* Ciphered Text */
-                                 encryptedtext_length,       /* Ciphered Text length */
-                                 pKey,                       /* AES key length */
-                                 key_length,                 /* AES key */
-                                 pInitial_value,             /* Initial Value */
-                                 16,                         /* Initial Value length*/
-                                 pPlaintext,                 /* Plain Text */
-                                 &cmox_plaintext_len         /* Plain Text length*/
+    retval = cmox_cipher_decrypt(CMOX_AESSMALL_CBC_DEC_ALGO,                                                                        /* Use AES CBC algorithm */
+                                 pEncryptedtext,                                                                                    /* Ciphered Text */
+                                 encryptedtext_length,                                                                              /* Ciphered Text length */
+                                 aes_keys_storage[key_idx].key,                                                                     /* AES key */
+                                 aes_keys_storage[key_idx].type == STSE_AES_128_KT ? STSE_AES_128_KEY_SIZE : STSE_AES_256_KEY_SIZE, /* AES key length */
+                                 pInitial_value,                                                                                    /* Initial Value */
+                                 16,                                                                                                /* Initial Value length*/
+                                 pPlaintext,                                                                                        /* Plain Text */
+                                 &cmox_plaintext_len                                                                                /* Plain Text length*/
     );
 
     /*- Verify AES ECB decrypt return */
@@ -225,26 +282,26 @@ stse_ReturnCode_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext,
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_ecb_enc(const PLAT_UI8 *pPlaintext,
-                                            PLAT_UI16 plaintext_length,
-                                            const PLAT_UI8 *pKey,
-                                            PLAT_UI16 key_length,
-                                            PLAT_UI8 *pEncryptedtext,
-                                            PLAT_UI16 *pEncryptedtext_length) {
+stse_ReturnCode_t stse_platform_aes_ecb_enc(const PLAT_UI8 *pPlaintext, PLAT_UI16 plaintext_length,
+                                            const PLAT_UI32 key_idx, PLAT_UI8 *pEncryptedtext, PLAT_UI16 *pEncryptedtext_length) {
     cmox_cipher_retval_t retval;
     PLAT_UI8 IV[16] = {0};
     size_t cmox_encryptedtext_len = *pEncryptedtext_length;
 
+    if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_CIPHER) {
+        return STSE_PLATFORM_INVALID_PARAMETER;
+    }
+
     /*- Perform AES ECB Encryption */
-    retval = cmox_cipher_encrypt(CMOX_AESSMALL_ECB_ENC_ALGO, /* Use AES ECB algorithm */
-                                 pPlaintext,                 /* Plain Text */
-                                 plaintext_length,           /* Plain Text length*/
-                                 pKey,                       /* AES Key */
-                                 key_length,                 /* AES Key length*/
-                                 IV,                         /* Initial Value */
-                                 16,                         /* Initial Value length */
-                                 pEncryptedtext,             /* Ciphered Text */
-                                 &cmox_encryptedtext_len     /* Ciphered Text length*/
+    retval = cmox_cipher_encrypt(CMOX_AESSMALL_ECB_ENC_ALGO,                                                                        /* Use AES ECB algorithm */
+                                 pPlaintext,                                                                                        /* Plain Text */
+                                 plaintext_length,                                                                                  /* Plain Text length*/
+                                 aes_keys_storage[key_idx].key,                                                                     /* AES key */
+                                 aes_keys_storage[key_idx].type == STSE_AES_128_KT ? STSE_AES_128_KEY_SIZE : STSE_AES_256_KEY_SIZE, /* AES key length */
+                                 IV,                                                                                                /* Initial Value */
+                                 16,                                                                                                /* Initial Value length */
+                                 pEncryptedtext,                                                                                    /* Ciphered Text */
+                                 &cmox_encryptedtext_len                                                                            /* Ciphered Text length*/
     );
 
     /*- Verify AES ECB Encryption status */
@@ -288,4 +345,4 @@ stse_ReturnCode_t stse_platform_aes_ecb_dec(const PLAT_UI8 *pEncryptedtext,
 
     return STSE_OK;
 }
-#endif /* defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT)*/
+#endif /* defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT) */

@@ -1,6 +1,6 @@
 /******************************************************************************
- * \file	stse_platform_crypto.c
- * \brief   STSecureElement cryptographic platform file
+ * \file	stse_platform_ecc.c
+ * \brief   STSecureElement ECC platform file
  * \author  STMicroelectronics - CS application team
  *
  ******************************************************************************

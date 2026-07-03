@@ -19,7 +19,9 @@
 #include "stse_conf.h"
 #include "stselib.h"
 
-stse_ReturnCode_t stse_platform_crypto_init(void) {
+stse_ReturnCode_t stse_platform_crypto_init(void *pArg) {
+    (void)pArg;
+
     stse_ReturnCode_t ret = STSE_OK;
 
     /* - Initialize STM32 CMOX library */
