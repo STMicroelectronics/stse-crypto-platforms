@@ -157,7 +157,7 @@ static size_t stse_platform_get_cmox_ecc_sig_len(stse_ecc_key_type_t key_type) {
     }
 }
 
-stse_ReturnCode_t stse_platform_ecc_verify(
+stse_return_code_t stse_platform_ecc_verify(
     stse_ecc_key_type_t key_type,
     const PLAT_UI8 *pPubKey,
     PLAT_UI8 *pDigest,
@@ -284,7 +284,7 @@ PLAT_UI8 static_c25519_pub_key[32] = {0x59, 0x86, 0xA8, 0xA3, 0x51, 0xBB, 0x07, 
                                       0xA1, 0xA5, 0xE1, 0x9A, 0xCB, 0x57, 0x55, 0xF6,
                                       0x57, 0xF9, 0x43, 0xE9, 0xBC, 0x39, 0x54, 0x0B};
 
-stse_ReturnCode_t stse_platform_ecc_generate_key_pair(
+stse_return_code_t stse_platform_ecc_generate_key_pair(
     stse_ecc_key_type_t key_type,
     PLAT_UI8 *pPrivKey,
     PLAT_UI8 *pPubKey) {
@@ -375,7 +375,7 @@ stse_ReturnCode_t stse_platform_ecc_generate_key_pair(
     defined(STSE_CONF_USE_SYMMETRIC_KEY_ESTABLISHMENT_AUTHENTICATED) ||   \
     defined(STSE_CONF_USE_SYMMETRIC_KEY_PROVISIONING_WRAPPED_AUTHENTICATED)
 
-stse_ReturnCode_t stse_platform_ecc_sign(
+stse_return_code_t stse_platform_ecc_sign(
     stse_ecc_key_type_t key_type,
     PLAT_UI8 *pPrivKey,
     PLAT_UI8 *pDigest,
@@ -472,7 +472,7 @@ stse_ReturnCode_t stse_platform_ecc_sign(
     defined(STSE_CONF_USE_SYMMETRIC_KEY_PROVISIONING_WRAPPED) ||          \
     defined(STSE_CONF_USE_SYMMETRIC_KEY_PROVISIONING_WRAPPED_AUTHENTICATED)
 
-stse_ReturnCode_t stse_platform_ecc_ecdh(
+stse_return_code_t stse_platform_ecc_ecdh(
     stse_ecc_key_type_t key_type,
     const PLAT_UI8 *pPubKey,
     const PLAT_UI8 *pPrivKey,
@@ -531,7 +531,7 @@ stse_ReturnCode_t stse_platform_ecc_ecdh(
 #define KEK_WRAP_IV_SIZE 8
 const PLAT_UI8 KEK_WRAP_IV[KEK_WRAP_IV_SIZE] = {0xA6, 0xA6, 0xA6, 0xA6, 0xA6, 0xA6, 0xA6, 0xA6};
 
-stse_ReturnCode_t stse_platform_nist_kw_encrypt(PLAT_UI8 *pPayload, PLAT_UI32 payload_length,
+stse_return_code_t stse_platform_nist_kw_encrypt(PLAT_UI8 *pPayload, PLAT_UI32 payload_length,
                                                 PLAT_UI8 *pKey, PLAT_UI8 key_length,
                                                 PLAT_UI8 *pOutput, PLAT_UI32 *pOutput_length) {
     cmox_cipher_retval_t retval;

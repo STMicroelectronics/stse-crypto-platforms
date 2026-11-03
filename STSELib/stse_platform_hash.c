@@ -22,6 +22,10 @@
 #include "stse_conf.h"
 #include "stselib.h"
 
+#if defined(STSE_CONF_HASH_SHA_1) || defined(STSE_CONF_HASH_SHA_224) ||                                      \
+    defined(STSE_CONF_HASH_SHA_256) || defined(STSE_CONF_HASH_SHA_384) || defined(STSE_CONF_HASH_SHA_512) || \
+    defined(STSE_CONF_HASH_SHA_3_256) || defined(STSE_CONF_HASH_SHA_3_284) || defined(STSE_CONF_HASH_SHA_3_512)
+
 static cmox_hash_algo_t stse_platform_get_cmox_hash_algo(stse_hash_algorithm_t hash_algo) {
     switch (hash_algo) {
 #ifdef STSE_CONF_HASH_SHA_1
@@ -61,7 +65,11 @@ static cmox_hash_algo_t stse_platform_get_cmox_hash_algo(stse_hash_algorithm_t h
     }
 }
 
-stse_ReturnCode_t stse_platform_hash_compute(stse_hash_algorithm_t hash_algo,
+#endif /* STSE_CONF_HASH_SHA_1 || STSE_CONF_HASH_SHA_224 ||\
+          STSE_CONF_HASH_SHA_256 || STSE_CONF_HASH_SHA_384 || STSE_CONF_HASH_SHA_512 ||\
+          STSE_CONF_HASH_SHA_3_256 || STSE_CONF_HASH_SHA_3_284 || STSE_CONF_HASH_SHA_3_512 */
+
+stse_return_code_t stse_platform_hash_compute(stse_hash_algorithm_t hash_algo,
                                              PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
                                              PLAT_UI8 *pHash, PLAT_UI16 *hash_length) {
 #if defined(STSE_CONF_HASH_SHA_1) || defined(STSE_CONF_HASH_SHA_224) ||                                      \
@@ -92,7 +100,7 @@ stse_ReturnCode_t stse_platform_hash_compute(stse_hash_algorithm_t hash_algo,
           STSE_CONF_HASH_SHA_3_256 || STSE_CONF_HASH_SHA_3_284 || STSE_CONF_HASH_SHA_3_512 */
 }
 
-stse_ReturnCode_t stse_platform_hmac_sha256_extract(PLAT_UI8 *pSalt, PLAT_UI16 salt_length,
+stse_return_code_t stse_platform_hmac_sha256_extract(PLAT_UI8 *pSalt, PLAT_UI16 salt_length,
                                                     PLAT_UI8 *pInput_keying_material, PLAT_UI16 input_keying_material_length,
                                                     PLAT_UI8 *pPseudorandom_key, PLAT_UI16 pseudorandom_key_expected_length) {
     cmox_mac_retval_t retval;
@@ -118,7 +126,7 @@ stse_ReturnCode_t stse_platform_hmac_sha256_extract(PLAT_UI8 *pSalt, PLAT_UI16 s
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_hmac_sha256_expand(PLAT_UI8 *pPseudorandom_key, PLAT_UI16 pseudorandom_key_length,
+stse_return_code_t stse_platform_hmac_sha256_expand(PLAT_UI8 *pPseudorandom_key, PLAT_UI16 pseudorandom_key_length,
                                                    PLAT_UI8 *pInfo, PLAT_UI16 info_length,
                                                    PLAT_UI8 *pOutput_keying_material, PLAT_UI16 output_keying_material_length) {
     cmox_mac_retval_t retval;
