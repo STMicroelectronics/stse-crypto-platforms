@@ -66,6 +66,11 @@ stse_return_code_t stse_platform_store_aes_key(PLAT_UI8 *pKey,
 }
 
 stse_return_code_t stse_platform_delete_aes_key(PLAT_UI32 key_idx) {
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
+
     memset(&aes_keys_storage[key_idx], 0x00, sizeof(aes_keys_storage[key_idx]));
     aes_keys_storage[key_idx].type = STSE_AES_INVALID_KT;
     aes_keys_storage[key_idx].usage = STSE_AES_KEY_USAGE_INVALID;
@@ -76,6 +81,11 @@ stse_return_code_t stse_platform_delete_aes_key(PLAT_UI32 key_idx) {
 stse_return_code_t stse_platform_aes_cmac_init(const PLAT_UI32 key_idx,
                                               PLAT_UI16 exp_tag_size) {
     cmox_mac_retval_t retval;
+
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
 
     if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_MAC && aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_GENERIC_SECRET) {
         return STSE_PLATFORM_INVALID_PARAMETER;
@@ -162,6 +172,11 @@ stse_return_code_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload, PLAT
     cmox_mac_retval_t retval;
     size_t cmox_tag_len = *pTag_length;
 
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
+
     if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_MAC && aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_GENERIC_SECRET) {
         return STSE_PLATFORM_INVALID_PARAMETER;
     }
@@ -192,6 +207,11 @@ stse_return_code_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload, PLAT_
                                                 const PLAT_UI8 *pTag, PLAT_UI16 tag_length) {
     cmox_mac_retval_t retval;
 
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
+
     if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_MAC && aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_GENERIC_SECRET) {
         return STSE_PLATFORM_INVALID_PARAMETER;
     }
@@ -221,6 +241,11 @@ stse_return_code_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext, PLAT_UI
                                             PLAT_UI8 *pInitial_value, const PLAT_UI32 key_idx, PLAT_UI8 *pEncryptedtext,
                                             PLAT_UI16 *pEncryptedtext_length) {
     cmox_cipher_retval_t retval;
+
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
 
     if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_CIPHER) {
         return STSE_PLATFORM_INVALID_PARAMETER;
@@ -256,6 +281,11 @@ stse_return_code_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext, PLA
     cmox_cipher_retval_t retval;
     size_t cmox_plaintext_len = *pPlaintext_length;
 
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
+
     if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_CIPHER) {
         return STSE_PLATFORM_INVALID_PARAMETER;
     }
@@ -287,6 +317,11 @@ stse_return_code_t stse_platform_aes_ecb_enc(const PLAT_UI8 *pPlaintext, PLAT_UI
     cmox_cipher_retval_t retval;
     PLAT_UI8 IV[16] = {0};
     size_t cmox_encryptedtext_len = *pEncryptedtext_length;
+
+    if (key_idx >= (sizeof(aes_keys_storage) / sizeof(aes_keys_storage[0])))
+    {
+    	return STSE_PLATFORM_UNEXPECTED_ERROR;
+    }
 
     if (aes_keys_storage[key_idx].usage != STSE_AES_KEY_USAGE_CIPHER) {
         return STSE_PLATFORM_INVALID_PARAMETER;
