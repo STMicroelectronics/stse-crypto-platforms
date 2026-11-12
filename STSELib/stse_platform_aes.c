@@ -35,7 +35,7 @@ stse_aes_key_t aes_keys_storage[3] = {
      .usage = STSE_AES_KEY_USAGE_INVALID,
      .key = {0}}};
 
-stse_ReturnCode_t stse_platform_store_aes_key(PLAT_UI8 *pKey,
+stse_return_code_t stse_platform_store_aes_key(PLAT_UI8 *pKey,
                                               PLAT_UI16 key_length,
                                               stse_aes_key_usage_t usage,
                                               PLAT_UI32 *pKey_idx) {
@@ -65,7 +65,7 @@ stse_ReturnCode_t stse_platform_store_aes_key(PLAT_UI8 *pKey,
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_delete_aes_key(PLAT_UI32 key_idx) {
+stse_return_code_t stse_platform_delete_aes_key(PLAT_UI32 key_idx) {
     memset(&aes_keys_storage[key_idx], 0x00, sizeof(aes_keys_storage[key_idx]));
     aes_keys_storage[key_idx].type = STSE_AES_INVALID_KT;
     aes_keys_storage[key_idx].usage = STSE_AES_KEY_USAGE_INVALID;
@@ -73,7 +73,7 @@ stse_ReturnCode_t stse_platform_delete_aes_key(PLAT_UI32 key_idx) {
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_init(const PLAT_UI32 key_idx,
+stse_return_code_t stse_platform_aes_cmac_init(const PLAT_UI32 key_idx,
                                               PLAT_UI16 exp_tag_size) {
     cmox_mac_retval_t retval;
 
@@ -105,11 +105,11 @@ stse_ReturnCode_t stse_platform_aes_cmac_init(const PLAT_UI32 key_idx,
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_append(PLAT_UI8 *pInput,
-                                                PLAT_UI16 lenght) {
+stse_return_code_t stse_platform_aes_cmac_append(PLAT_UI8 *pInput,
+                                                PLAT_UI16 LENGTH) {
     cmox_mac_retval_t retval;
 
-    retval = cmox_mac_append(pMAC_Handler, pInput, lenght);
+    retval = cmox_mac_append(pMAC_Handler, pInput, LENGTH);
 
     if (retval != CMOX_MAC_SUCCESS) {
         return STSE_PLATFORM_AES_CMAC_COMPUTE_ERROR;
@@ -118,7 +118,7 @@ stse_ReturnCode_t stse_platform_aes_cmac_append(PLAT_UI8 *pInput,
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_compute_finish(PLAT_UI8 *pTag, PLAT_UI8 *pTagLen) {
+stse_return_code_t stse_platform_aes_cmac_compute_finish(PLAT_UI8 *pTag, PLAT_UI8 *pTagLen) {
     cmox_mac_retval_t retval;
     size_t cmox_tag_len = *pTagLen;
 
@@ -137,7 +137,7 @@ stse_ReturnCode_t stse_platform_aes_cmac_compute_finish(PLAT_UI8 *pTag, PLAT_UI8
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_verify_finish(PLAT_UI8 *pTag) {
+stse_return_code_t stse_platform_aes_cmac_verify_finish(PLAT_UI8 *pTag) {
     cmox_mac_retval_t retval;
     uint32_t cmox_mac_fault_check = 0;
 
@@ -155,7 +155,7 @@ stse_ReturnCode_t stse_platform_aes_cmac_verify_finish(PLAT_UI8 *pTag) {
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
+stse_return_code_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
                                                  const PLAT_UI32 key_idx,
                                                  PLAT_UI16 exp_tag_size,
                                                  PLAT_UI8 *pTag, PLAT_UI16 *pTag_length) {
@@ -187,7 +187,7 @@ stse_ReturnCode_t stse_platform_aes_cmac_compute(const PLAT_UI8 *pPayload, PLAT_
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
+stse_return_code_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload, PLAT_UI16 payload_length,
                                                 const PLAT_UI32 key_idx,
                                                 const PLAT_UI8 *pTag, PLAT_UI16 tag_length) {
     cmox_mac_retval_t retval;
@@ -217,7 +217,7 @@ stse_ReturnCode_t stse_platform_aes_cmac_verify(const PLAT_UI8 *pPayload, PLAT_U
 #endif /* defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT) || defined(STSE_CONF_USE_SYMMETRIC_KEY_ESTABLISHMENT) */
 
 #if defined(STSE_CONF_USE_HOST_KEY_ESTABLISHMENT) || defined(STSE_CONF_USE_HOST_SESSION)
-stse_ReturnCode_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext, PLAT_UI16 plaintext_length,
+stse_return_code_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext, PLAT_UI16 plaintext_length,
                                             PLAT_UI8 *pInitial_value, const PLAT_UI32 key_idx, PLAT_UI8 *pEncryptedtext,
                                             PLAT_UI16 *pEncryptedtext_length) {
     cmox_cipher_retval_t retval;
@@ -250,7 +250,7 @@ stse_ReturnCode_t stse_platform_aes_cbc_enc(const PLAT_UI8 *pPlaintext, PLAT_UI1
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext, PLAT_UI16 encryptedtext_length,
+stse_return_code_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext, PLAT_UI16 encryptedtext_length,
                                             PLAT_UI8 *pInitial_value, const PLAT_UI32 key_idx, PLAT_UI8 *pPlaintext,
                                             PLAT_UI16 *pPlaintext_length) {
     cmox_cipher_retval_t retval;
@@ -282,7 +282,7 @@ stse_ReturnCode_t stse_platform_aes_cbc_dec(const PLAT_UI8 *pEncryptedtext, PLAT
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_ecb_enc(const PLAT_UI8 *pPlaintext, PLAT_UI16 plaintext_length,
+stse_return_code_t stse_platform_aes_ecb_enc(const PLAT_UI8 *pPlaintext, PLAT_UI16 plaintext_length,
                                             const PLAT_UI32 key_idx, PLAT_UI8 *pEncryptedtext, PLAT_UI16 *pEncryptedtext_length) {
     cmox_cipher_retval_t retval;
     PLAT_UI8 IV[16] = {0};
@@ -314,7 +314,7 @@ stse_ReturnCode_t stse_platform_aes_ecb_enc(const PLAT_UI8 *pPlaintext, PLAT_UI1
     return STSE_OK;
 }
 
-stse_ReturnCode_t stse_platform_aes_ecb_dec(const PLAT_UI8 *pEncryptedtext,
+stse_return_code_t stse_platform_aes_ecb_dec(const PLAT_UI8 *pEncryptedtext,
                                             PLAT_UI16 encryptedtext_length,
                                             const PLAT_UI8 *pKey,
                                             PLAT_UI16 key_length,
